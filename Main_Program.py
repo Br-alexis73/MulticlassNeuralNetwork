@@ -1,52 +1,13 @@
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, LabelEncoder
 from sklearn.utils import shuffle
 from NN import MultiClassNeuralNetwork
+from loss_functions import cross_entropy_loss
 from Evaluation_Validation import calculate_accuracy, plot_learning_curves
 from Evaluation_Cross_Validation import cross_validation
-from Evaluation_Curves import hyperparameter_tuning, multi_layer_hyperparameter_tuning
-
-
-# def get_user_input():
-#     # Ask the user to choose between single-layer or multi-layer network
-#     network_type = input("Choose network type (Single or Multi-layer): ").strip().lower()
-#
-#     if network_type == "single":
-#         # If single layer, only ask for the activation function
-#         activation_function = input(
-#             "Enter the activation function for the single layer (e.g., sigmoid, relu): ").strip().lower()
-#         learning_rate = float(input("Enter the learning rate (e.g., 0.01): ").strip())
-#         return {
-#             "network_type": "single",
-#             "activation_function": activation_function,
-#             "learning_rate": learning_rate
-#         }
-#
-#     elif network_type == "multi":
-#         # If multi-layer, ask for number of neurons, layers, and activation functions
-#         num_neurons = input("Enter the number of neurons in each hidden layer separated by comma (e.g., 64,64): ")
-#         num_layers = int(input("Enter the number of layers in the network: ").strip())
-#         inner_activation_function = input(
-#             "Enter the inner layers activation function (e.g., sigmoid, relu): ").strip().lower()
-#         output_activation_function = input(
-#             "Enter the output activation function (e.g., softmax, sigmoid): ").strip().lower()
-#         loss_function = input("Enter the loss function (e.g., cross_entropy): ").strip().lower()
-#         learning_rate = float(input("Enter the learning rate for the multi-layer network (e.g., 0.01): ").strip())
-#         return {
-#             "network_type": "multi",
-#             "num_neurons": [int(n) for n in num_neurons.split(',')],
-#             "num_layers": num_layers,
-#             "inner_activation_function": inner_activation_function,
-#             "output_activation_function": output_activation_function,
-#             "loss_function": loss_function,
-#             "learning_rate": learning_rate
-#         }
-#
-#     else:
-#         print("Invalid network type selected.")
-#         return None
 
 
 def preprocessing():
@@ -88,7 +49,7 @@ def main():
     # Instantiate the neural network
     input_size = train_data.shape[1] - 1  # Subtract 1 for the target column
     output_size = len(np.unique(train_data['Species']))  # Number of species
-    hidden_layers = [5]  # Example: One hidden layer with 5 neurons
+    hidden_layers = [5, 3]  # Example: One hidden layer with 5 neurons
     nn = MultiClassNeuralNetwork(input_size, hidden_layers, output_size)
 
     # Prepare training data
@@ -102,12 +63,18 @@ def main():
     epochs = 100  # Number of times to loop through the entire dataset
     learning_rate = 0.01  # Learning rate for the optimizer
 
+    # Lists to store metrics for plotting
+    training_accuracies = []
+    testing_accuracies = []
+    losses = []
+
     for epoch in range(epochs):
         # Forward propagation
-        predictions = nn.feedforward(x_train)
+        predictions = nn.train(x_train, y_train, epochs, learning_rate)
 
         # Calculate loss
-        loss = nn.cross_entropy_loss(y_train, predictions)
+        loss = (y_train, predictions)
+        losses.append(loss)
 
         # Backpropagation
         gradients = nn.backpropagation(y_train, predictions)
@@ -115,18 +82,36 @@ def main():
         # Update weights
         nn.update_weights(gradients, learning_rate)
 
-        if epoch % 10 == 0:  # Print the loss every 10 epochs
-            print(f"Epoch {epoch}, Loss: {loss}")
+        # Evaluate and store accuracies every 10 epochs, for example
+        if epoch % 10 == 0:
+            train_accuracy = calculate_accuracy(y_train, nn.feedforward(x_train))
+            test_accuracy = calculate_accuracy(y_test, nn.feedforward(x_test))
+            training_accuracies.append(train_accuracy)
+            testing_accuracies.append(test_accuracy)
+            print(
+                f"Epoch {epoch}, Loss: {loss}, Training Accuracy: {train_accuracy}, Testing Accuracy: {test_accuracy}")
 
-    # Evaluate the network's performance on training data
-    train_predictions = nn.feedforward(x_train)
-    train_accuracy = calculate_accuracy(y_train, train_predictions)
-    print(f"Training accuracy: {train_accuracy}")
+        # Plotting
+    plt.figure(figsize=(12, 5))
 
-    # Evaluate the network's performance on testing data
-    test_predictions = nn.feedforward(x_test)
-    test_accuracy = calculate_accuracy(y_test, test_predictions)
-    print(f"Testing accuracy: {test_accuracy}")
+    # Plot training and testing accuracies
+    plt.subplot(1, 2, 1)
+    plt.plot(training_accuracies, label='Training Accuracy')
+    plt.plot(testing_accuracies, label='Testing Accuracy')
+    plt.title('Training and Testing Accuracies')
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy')
+    plt.legend()
+
+    # Plot loss
+    plt.subplot(1, 2, 2)
+    plt.plot(losses, label='Training Loss')
+    plt.title('Training Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend()
+
+    plt.show()
 
 
 if __name__ == "__main__":

@@ -1,13 +1,6 @@
 import numpy as np
-
-
-def relu(x):
-    return np.maximum(0, x)
-
-
-def softmax(x):
-    e_x = np.exp(x - np.max(x))  # Subtract max for numerical stability
-    return e_x / e_x.sum(axis=1, keepdims=True)
+from activation_functions import relu, relu_prime, sigmoid, softmax
+from loss_functions import cross_entropy_loss, mean_squared_error_loss
 
 
 class MultiClassNeuralNetwork:
@@ -32,20 +25,44 @@ class MultiClassNeuralNetwork:
         output = softmax(np.dot(activations, self.weights[-1]) + self.biases[-1])
         return output
 
-    def cross_entropy_loss(self, output, target):
-        # Ensure that output is 2-dimensional
-        output = np.atleast_2d(output)
-
-        # Calculate log_likelihood for correct class predictions
-        log_likelihood = -np.log(output[np.arange(len(output)), target.argmax(axis=1)])
-        loss = np.sum(log_likelihood) / len(log_likelihood)
-        return loss
-
     def backpropagation(self, inputs, target_outputs):
+        # Forward pass to get the activations and pre-activation values for each layer
+        activations = [inputs]  # List to store activations for each layer
+        zs = []  # List to store pre-activation values for each layer
+
+        # Forward pass through hidden layers
+        for w, b in zip(self.weights[:-1], self.biases[:-1]):
+            z = np.dot(activations[-1], w) + b
+            zs.append(z)
+            activations.append(relu(z))
+
+        # Forward pass through the output layer
+        final_z = np.dot(activations[-1], self.weights[-1]) + self.biases[-1]
+        zs.append(final_z)
+        activations.append(softmax(final_z))
+
+        # Backward pass
         gradients = {
             "weights": [np.zeros_like(w) for w in self.weights],
             "biases": [np.zeros_like(b) for b in self.biases]
         }
+
+        # Calculate the gradient of the loss function with respect to the output of the network
+        delta = self.loss_derivative(activations[-1],
+                                     target_outputs)  # This needs to be implemented based on the loss function
+
+        # Backpropagate the error through the output layer
+        gradients["weights"][-1] = np.dot(activations[-2].T, delta)
+        gradients["biases"][-1] = delta
+
+        # Backpropagate through the hidden layers
+        for l in range(2, len(self.weights) + 1):
+            z = zs[-l]
+            sp = relu_prime(z)  # Assuming relu is used in hidden layers; implement this derivative function
+            delta = np.dot(delta, self.weights[-l + 1].T) * sp
+            gradients["weights"][-l] = np.dot(activations[-l - 1].T, delta)
+            gradients["biases"][-l] = delta
+
         return gradients
 
     def update_weights(self, gradients, learning_rate):
@@ -58,7 +75,7 @@ class MultiClassNeuralNetwork:
             total_loss = 0
             for i, (input_data, label) in enumerate(zip(data, labels)):
                 output = self.feedforward(input_data)
-                loss = self.cross_entropy_loss(output, label)
+                loss = cross_entropy_loss(output, label)
                 total_loss += loss
                 gradients = self.backpropagation(input_data, label)
                 self.update_weights(gradients, learning_rate)

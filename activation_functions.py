@@ -22,7 +22,3 @@ def softmax(logits):
     return exp_x / np.sum(exp_x, axis=1, keepdims=True)
 
 
-def cross_entropy_loss(y_true, y_pred):
-    epsilon = 1e-15
-    y_pred = np.clip(y_pred, epsilon, 1 - epsilon)
-    return - (y_true * np.log(y_pred) + (1 - y_true) * np.log(1 - y_pred))
