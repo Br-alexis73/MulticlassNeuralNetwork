@@ -42,8 +42,8 @@ class MultiClassNeuralNetwork:
         self.weights = []
         self.biases = []
 
-        # Input layer to first hidden layer
-        self.weights.append(np.random.randn(input_size, hidden_sizes[0]))
+        # Improved weight initialization (He initialization for ReLU activation)
+        self.weights.append(np.random.randn(input_size, hidden_sizes[0]) * np.sqrt(2. / input_size))
         self.biases.append(np.zeros(hidden_sizes[0]))
 
         # Hidden layers
@@ -55,8 +55,8 @@ class MultiClassNeuralNetwork:
         self.weights.append(np.random.randn(hidden_sizes[-1], output_size))
         self.biases.append(np.zeros(output_size))
 
-    def compute_loss_and_gradients(self, inputs, labels):
-        # Forward pass
+    def forward(self, inputs):
+        """Perform the forward pass."""
         activations = [inputs]
         z_values = []  # Store pre-activation values for backpropagation
 
@@ -72,13 +72,19 @@ class MultiClassNeuralNetwork:
         predictions = softmax(z)
         activations.append(predictions)
 
-        # Compute loss
+        return activations, z_values, predictions
+
+    def compute_loss(self, predictions, labels):
+        """Compute the loss and accuracy."""
         loss = cross_entropy_loss(predictions, labels)
         accuracy = compute_accuracy(predictions, labels)
+        return loss, accuracy
 
-        # Backward pass to compute gradients
+    def compute_loss_and_gradients(self, inputs, labels):
+        """Compute loss, accuracy, and gradients for backpropagation."""
+        activations, z_values, predictions = self.forward(inputs)
+        loss, accuracy = self.compute_loss(predictions, labels)
         gradients = self.backpropagation(activations, z_values, labels)
-
         return loss, accuracy, gradients
 
     def backpropagation(self, activations, z_values, labels):
@@ -97,7 +103,7 @@ class MultiClassNeuralNetwork:
             gradients_w[-l] = np.dot(activations[-l - 1].T, delta)
             gradients_b[-l] = np.sum(delta, axis=0)
 
-        return (gradients_w, gradients_b)
+        return gradients_w, gradients_b
 
     def update_parameters(self, gradients, learning_rate):
         gradients_w, gradients_b = gradients
@@ -106,47 +112,33 @@ class MultiClassNeuralNetwork:
             self.weights[i] -= learning_rate * gradients_w[i]
             self.biases[i] -= learning_rate * gradients_b[i]
 
-    def train(self, training_data, labels, epochs, learning_rate):
-        for epoch in range(epochs):
-            loss, accuracy, gradients = self.compute_loss_and_gradients(training_data, labels)
-            self.update_parameters(gradients, learning_rate)
-            if epoch % 100 == 0:  # Print every 100 epochs
-                print(f'Epoch {epoch}, Loss: {loss}, Accuracy: {accuracy}')
+    def train_epoch(self, inputs, labels, learning_rate):
+        """Train for a single epoch and return loss and accuracy."""
+        # Compute loss and gradients for one batch of data
+        loss, accuracy, gradients = self.compute_loss_and_gradients(inputs, labels)
+        # Update the network parameters
+        self.update_parameters(gradients, learning_rate)
+        return loss, accuracy
 
-# Assuming you have training_data (inputs) and labels (one-hot encoded)
-# nn.train(training_data, labels, epochs=1000, learning_rate=0.01)
+    def train(self, x_train, y_train, x_test, y_test, epochs, learning_rate):
+        """Run the training process over the full number of epochs."""
+        losses, training_accuracies, testing_accuracies = [], [], []
 
+        for epoch in range(1, epochs + 1):
+            # Train for one epoch and get loss and accuracy
+            loss, train_accuracy = self.train_epoch(x_train, y_train, learning_rate)
 
-# Generate synthetic data
-np.random.seed(42)  # For reproducibility
-num_samples_per_class = 100
-input_size = 2  # 2D features
-num_classes = 3  # 3 classes
+            # Evaluate on the testing set
+            _, z_values, predictions = self.forward(x_test)  # Get predictions for the test set
+            test_loss, test_accuracy = self.compute_loss(predictions, y_test)  # Compute loss and accuracy on test set
 
-# Features
-X = np.vstack([
-    np.random.randn(num_samples_per_class, input_size) + np.array([2, 2]),
-    np.random.randn(num_samples_per_class, input_size) + np.array([0, -2]),
-    np.random.randn(num_samples_per_class, input_size) + np.array([-2, 2])
-])
+            # Store metrics
+            losses.append(loss)
+            training_accuracies.append(train_accuracy)
+            testing_accuracies.append(test_accuracy)
 
-# Labels (not one-hot encoded yet)
-y = np.array([0] * num_samples_per_class + [1] * num_samples_per_class + [2] * num_samples_per_class)
+            # Print log every 10 epochs
+            if epoch % 10 == 0:
+                print(f"Epoch {epoch}, Loss: {loss:.4f}, Training Accuracy: {train_accuracy:.2f}, Testing Accuracy: {test_accuracy:.2f}")
 
-# Convert labels to one-hot encoding
-Y_one_hot = np.zeros((y.size, num_classes))
-Y_one_hot[np.arange(y.size), y] = 1
-
-# Split the data into training and test sets (here, we'll use all data for training for simplicity)
-X_train = X
-Y_train = Y_one_hot
-
-# Initialize the neural network
-hidden_sizes = [5, 4]  # Example: two hidden layers with 5 and 4 neurons
-output_size = num_classes  # Matching the number of classes
-nn = MultiClassNeuralNetwork(input_size, hidden_sizes, output_size)
-
-# Train the neural network
-epochs = 1000
-learning_rate = 0.01
-nn.train(X_train, Y_train, epochs, learning_rate)
+        return losses, training_accuracies, testing_accuracies

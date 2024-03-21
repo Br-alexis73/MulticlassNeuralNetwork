@@ -4,10 +4,9 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, LabelEncoder
 from sklearn.utils import shuffle
-from NN import MultiClassNeuralNetwork
+from MLP import MultiClassNeuralNetwork
 from loss_functions import cross_entropy_loss
 from Evaluation_Validation import calculate_accuracy, plot_learning_curves
-from Evaluation_Cross_Validation import cross_validation
 
 
 def preprocessing():
@@ -41,72 +40,43 @@ def preprocessing():
 
 def main():
     train_data, test_data = preprocessing()
-    print("\\nTraining Data:")
-    print(train_data.head())  # Show only the head for brevity
-    print("\\nTesting Data:")
-    print(test_data.head())  # Show only the head for brevity
+    print("\nTraining Data:")
+    print(train_data.head())
+    print("\nTesting Data:")
+    print(test_data.head())
 
-    # Instantiate the neural network
-    input_size = train_data.shape[1] - 1  # Subtract 1 for the target column
-    output_size = len(np.unique(train_data['Species']))  # Number of species
-    hidden_layers = [5, 3]  # Example: One hidden layer with 5 neurons
-    nn = MultiClassNeuralNetwork(input_size, hidden_layers, output_size)
+    input_size = train_data.shape[1] - 1
+    output_size = len(np.unique(train_data['Species']))
+    hidden_sizes = [5, 3]
+    nn = MultiClassNeuralNetwork(input_size, hidden_sizes, output_size)
 
-    # Prepare training data
     x_train = train_data.drop('Species', axis=1).values
-    y_train = train_data['Species'].values
-
-    # Prepare testing data
+    y_train = pd.get_dummies(train_data['Species']).values
     x_test = test_data.drop('Species', axis=1).values
-    y_test = test_data['Species'].values
+    y_test = pd.get_dummies(test_data['Species']).values
 
-    epochs = 100  # Number of times to loop through the entire dataset
-    learning_rate = 0.01  # Learning rate for the optimizer
+    epochs = 100
+    learning_rate = 0.001
 
-    # Lists to store metrics for plotting
-    training_accuracies = []
-    testing_accuracies = []
-    losses = []
+    # The train function should perform one epoch of training and return the loss and accuracy
+    losses, train_accuracy, test_accuracy = nn.train(x_train, y_train, x_test, y_test, epochs, learning_rate)
 
-    for epoch in range(epochs):
-        # Forward propagation
-        predictions = nn.train(x_train, y_train, epochs, learning_rate)
-
-        # Calculate loss
-        loss = (y_train, predictions)
-        losses.append(loss)
-
-        # Backpropagation
-        gradients = nn.backpropagation(y_train, predictions)
-
-        # Update weights
-        nn.update_weights(gradients, learning_rate)
-
-        # Evaluate and store accuracies every 10 epochs, for example
-        if epoch % 10 == 0:
-            train_accuracy = calculate_accuracy(y_train, nn.feedforward(x_train))
-            test_accuracy = calculate_accuracy(y_test, nn.feedforward(x_test))
-            training_accuracies.append(train_accuracy)
-            testing_accuracies.append(test_accuracy)
-            print(
-                f"Epoch {epoch}, Loss: {loss}, Training Accuracy: {train_accuracy}, Testing Accuracy: {test_accuracy}")
-
-        # Plotting
-    plt.figure(figsize=(12, 5))
+    # Plotting
+    plt.figure(figsize=(12, 6))
 
     # Plot training and testing accuracies
     plt.subplot(1, 2, 1)
-    plt.plot(training_accuracies, label='Training Accuracy')
-    plt.plot(testing_accuracies, label='Testing Accuracy')
-    plt.title('Training and Testing Accuracies')
+    plt.plot(train_accuracy, label='Training Accuracy')
+    plt.plot(test_accuracy, label='Testing Accuracy')
+    plt.title('Accuracy over Epochs')
     plt.xlabel('Epoch')
     plt.ylabel('Accuracy')
     plt.legend()
 
-    # Plot loss
+    # Plot training loss
     plt.subplot(1, 2, 2)
     plt.plot(losses, label='Training Loss')
-    plt.title('Training Loss')
+    plt.title('Loss over Epochs')
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.legend()

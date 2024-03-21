@@ -9,6 +9,7 @@ def calculate_accuracy(y_true, y_pred):
     # Now y_true and y_pred_classes should have the same shape
     return np.mean(y_true == y_pred_classes)
 
+
 def plot_learning_curves(losses):
     plt.plot(losses)
     plt.title('Learning Curves')

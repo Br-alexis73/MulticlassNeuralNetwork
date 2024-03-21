@@ -1,6 +1,6 @@
 import numpy as np
 import random
-from activation_functions import sigmoid, sigmoid_prime, relu, relu_prime, cross_entropy_loss, softmax
+from activation_functions import relu, relu_prime, cross_entropy_loss, softmax
 
 
 class NeuralNetwork:
