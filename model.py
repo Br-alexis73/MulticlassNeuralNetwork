@@ -6,8 +6,10 @@ from metrics import compute_accuracy
 
 
 class MultiClassNeuralNetwork:
-    def __init__(self, input_size, hidden_sizes, output_size):
+    def __init__(self, input_size, hidden_sizes, output_size, loss_function='cross_entropy', regularization_strength=0.01):
         # Initialize weights and biases for all layers
+        self.regularization_strength = regularization_strength
+        self.loss_function = loss_function
         self.weights = []
         self.biases = []
 
@@ -44,10 +46,29 @@ class MultiClassNeuralNetwork:
         return activations, z_values, predictions
 
     def compute_loss(self, predictions, labels):
-        """Compute the loss and accuracy."""
-        loss = cross_entropy_loss(predictions, labels)
+        # Select the loss function
+        if self.loss_function == 'cross_entropy':
+            loss = cross_entropy_loss(predictions, labels)
+        elif self.loss_function == 'mse':
+            loss = mean_squared_error(predictions, labels)
+        elif self.loss_function == 'mae':
+            loss = mean_absolute_error(predictions, labels)
+        else:
+            raise ValueError(f"Unknown loss function: {self.loss_function}")
+        # L2 regularization penalty
+        l2_penalty = sum(np.sum(w ** 2) for w in self.weights)
+        # Updated loss with L2 penalty
+        loss += self.regularization_strength / 2 * l2_penalty
+        # Accuracy computation remains unchanged
         accuracy = compute_accuracy(predictions, labels)
         return loss, accuracy
+
+    def set_loss_function(self, new_loss_function):
+        """Set a new loss function for the neural network."""
+        self.loss_function = new_loss_function
+
+    def set_regularization_strength(self, new_strength):
+        self.regularization_strength = new_strength
 
     def compute_loss_and_gradients(self, inputs, labels):
         """Compute loss, accuracy, and gradients for backpropagation."""
@@ -63,7 +84,7 @@ class MultiClassNeuralNetwork:
 
         # Output layer error
         delta = activations[-1] - labels
-        gradients_w[-1] = np.dot(activations[-2].T, delta)
+        gradients_w[-1] = np.dot(activations[-2].T, delta) + self.regularization_strength * self.weights[-1]
         gradients_b[-1] = np.sum(delta, axis=0)
 
         # Propagate error backwards
@@ -71,6 +92,9 @@ class MultiClassNeuralNetwork:
             delta = np.dot(delta, self.weights[-l + 1].T) * relu_derivative(z_values[-l])
             gradients_w[-l] = np.dot(activations[-l - 1].T, delta)
             gradients_b[-l] = np.sum(delta, axis=0)
+
+            # Apply L2 regularization to the gradient for the weights
+            gradients_w[-l] += self.regularization_strength * self.weights[-l]
 
         return gradients_w, gradients_b
 

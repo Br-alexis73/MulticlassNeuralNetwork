@@ -45,8 +45,10 @@ def main():
 
     input_size = train_data.shape[1] - 1
     output_size = len(np.unique(train_data['Species']))
-    hidden_sizes = [5, 3]
-    nn = MultiClassNeuralNetwork(input_size, hidden_sizes, output_size)
+    hidden_sizes = [7, 5, 5]
+    loss_function = 'mse'
+    regularization = 0.0001
+    nn = MultiClassNeuralNetwork(input_size, hidden_sizes, output_size, loss_function=loss_function, regularization_strength=regularization)
 
     x_train = train_data.drop('Species', axis=1).values
     y_train = pd.get_dummies(train_data['Species']).values
@@ -55,9 +57,7 @@ def main():
 
     epochs = 100
     learning_rate = 0.001
-    method = "batch"
-
-    # The train function should perform one epoch of training and return the loss and accuracy
+    method = "sgd"
     losses, train_accuracy, test_accuracy = nn.train(x_train, y_train, x_test, y_test, learning_rate, epochs, method=method)
 
 
