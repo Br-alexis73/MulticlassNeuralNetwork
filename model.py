@@ -1,39 +1,8 @@
 import numpy as np
-from sklearn.metrics import accuracy_score, precision_score, confusion_matrix
-
-def relu(x):
-    """ReLU activation function."""
-    return np.maximum(0, x)
-
-
-def relu_derivative(x):
-    """Derivative of ReLU activation function."""
-    return np.where(x > 0, 1, 0)
-
-
-def softmax(x):
-    """Softmax activation function."""
-    e_x = np.exp(x - np.max(x, axis=1, keepdims=True))
-    return e_x / e_x.sum(axis=1, keepdims=True)
-
-
-def cross_entropy_loss(predictions, labels):
-    """Categorical cross-entropy loss."""
-    # Number of samples
-    n_samples = labels.shape[0]
-    # Clip predictions to avoid log(0) error
-    predictions = np.clip(predictions, 1e-15, 1 - 1e-15)
-    # Compute cross-entropy loss
-    loss = -np.sum(labels * np.log(predictions)) / n_samples
-    return loss
-
-
-def compute_accuracy(predictions, labels):
-    """Compute accuracy of predictions."""
-    pred_labels = np.argmax(predictions, axis=1)
-    true_labels = np.argmax(labels, axis=1)
-    accuracy = np.mean(pred_labels == true_labels)
-    return accuracy
+from sklearn.metrics import accuracy_score, precision_score, confusion_matrix, recall_score, f1_score
+from activations import relu, relu_derivative, softmax
+from losses import cross_entropy_loss, mean_squared_error, mean_absolute_error
+from metrics import compute_accuracy
 
 
 class MultiClassNeuralNetwork:
@@ -42,7 +11,7 @@ class MultiClassNeuralNetwork:
         self.weights = []
         self.biases = []
 
-        # Improved weight initialization (He initialization for ReLU activation)
+        """He initialization for ReLU activation"""
         self.weights.append(np.random.randn(input_size, hidden_sizes[0]) * np.sqrt(2. / input_size))
         self.biases.append(np.zeros(hidden_sizes[0]))
 
@@ -120,7 +89,7 @@ class MultiClassNeuralNetwork:
         self.update_parameters(gradients, learning_rate)
         return loss, accuracy
 
-    def train(self, x_train, y_train, x_test, y_test, learning_rate, epochs, method='mini-batch', batch_size=32):
+    def train(self, x_train, y_train, x_test, y_test, learning_rate, epochs, method='sgd', batch_size=32):
         """Run the training process over the full number of epochs."""
         losses, training_accuracies, testing_accuracies = [], [], []
 
@@ -157,24 +126,22 @@ class MultiClassNeuralNetwork:
         return losses, training_accuracies, testing_accuracies
 
     def predict(self, x):
-        # Implement the predict method that returns the predictions for the input x
+        """Predict method that returns the predictions for the input x"""
         _, _, predictions = self.forward(x)
         return np.argmax(predictions, axis=1)
 
     def evaluate(self, x_test, y_test):
         y_pred = self.predict(x_test)
-        y_true = np.argmax(y_test, axis=1)  # Assuming y_test is one-hot encoded
+        y_true = np.argmax(y_test, axis=1)
 
-        # Calculate Accuracy
         accuracy = accuracy_score(y_true, y_pred)
-
-        # Calculate Precision for each class
         precision = precision_score(y_true, y_pred, average=None)
-
-        # Generate Confusion Matrix
+        recall = recall_score(y_true, y_pred, average=None)
+        f1 = f1_score(y_true, y_pred, average=None)
         conf_matrix = confusion_matrix(y_true, y_pred)
 
-        print("\n")
-        print(f"Accuracy over unseen data: {accuracy}")
-        print(f"Precision for each class: {precision}")
+        print(f"Accuracy: {accuracy}")
+        print(f"Precision: {precision}")
+        print(f"Recall: {recall}")
+        print(f"F1 Score: {f1}")
         print(f"Confusion Matrix:\n{conf_matrix}")

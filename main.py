@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, LabelEncoder
 from sklearn.utils import shuffle
-from MLP import MultiClassNeuralNetwork
+from model import MultiClassNeuralNetwork
 
 
 def preprocessing():
@@ -45,7 +45,7 @@ def main():
 
     input_size = train_data.shape[1] - 1
     output_size = len(np.unique(train_data['Species']))
-    hidden_sizes = [5, 4, 5, 3]
+    hidden_sizes = [5, 3]
     nn = MultiClassNeuralNetwork(input_size, hidden_sizes, output_size)
 
     x_train = train_data.drop('Species', axis=1).values
@@ -55,9 +55,11 @@ def main():
 
     epochs = 100
     learning_rate = 0.001
+    method = "batch"
 
     # The train function should perform one epoch of training and return the loss and accuracy
-    losses, train_accuracy, test_accuracy = nn.train(x_train, y_train, x_test, y_test, learning_rate, epochs)
+    losses, train_accuracy, test_accuracy = nn.train(x_train, y_train, x_test, y_test, learning_rate, epochs, method=method)
+
 
     # Plotting
     plt.figure(figsize=(12, 6))
@@ -73,7 +75,7 @@ def main():
     # Plot training loss
     plt.subplot(1, 2, 2)
     plt.plot(losses, label='Training Loss')
-    plt.title('Loss over Epochs')
+    plt.title(f'Loss over Epochs (GD Method: {method})')
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.legend()
