@@ -1,5 +1,5 @@
 import numpy as np
-
+from sklearn.metrics import accuracy_score, precision_score, confusion_matrix
 
 def relu(x):
     """ReLU activation function."""
@@ -120,25 +120,61 @@ class MultiClassNeuralNetwork:
         self.update_parameters(gradients, learning_rate)
         return loss, accuracy
 
-    def train(self, x_train, y_train, x_test, y_test, epochs, learning_rate):
+    def train(self, x_train, y_train, x_test, y_test, learning_rate, epochs, method='mini-batch', batch_size=32):
         """Run the training process over the full number of epochs."""
         losses, training_accuracies, testing_accuracies = [], [], []
 
         for epoch in range(1, epochs + 1):
-            # Train for one epoch and get loss and accuracy
-            loss, train_accuracy = self.train_epoch(x_train, y_train, learning_rate)
+            # Choose the gradient descent approach
+            if method == 'sgd':
+                # Implement SGD logic: Iterate over each example
+                for i in range(len(x_train)):
+                    loss, accuracy = self.train_epoch(x_train[i:i + 1], y_train[i:i + 1], learning_rate)
+            elif method == 'batch':
+                # Implement Batch GD logic: Use all data
+                loss, accuracy = self.train_epoch(x_train, y_train, learning_rate)
+            elif method == 'mini-batch':
+                # Implement Mini-batch GD logic: Split data into batches
+                for i in range(0, len(x_train), batch_size):
+                    x_batch = x_train[i:i + batch_size]
+                    y_batch = y_train[i:i + batch_size]
+                    loss, accuracy = self.train_epoch(x_batch, y_batch, learning_rate)
+            else:
+                raise ValueError("Invalid method chosen. Use 'sgd', 'batch', or 'mini-batch'.")
 
-            # Evaluate on the testing set
-            _, z_values, predictions = self.forward(x_test)  # Get predictions for the test set
-            test_loss, test_accuracy = self.compute_loss(predictions, y_test)  # Compute loss and accuracy on test set
+            # Evaluation on the testing set
+            _, _, predictions = self.forward(x_test)
+            test_loss, test_accuracy = self.compute_loss(predictions, y_test)
 
-            # Store metrics
+            # Log and store metrics
             losses.append(loss)
-            training_accuracies.append(train_accuracy)
+            training_accuracies.append(accuracy)
             testing_accuracies.append(test_accuracy)
-
-            # Print log every 10 epochs
             if epoch % 10 == 0:
-                print(f"Epoch {epoch}, Loss: {loss:.4f}, Training Accuracy: {train_accuracy:.2f}, Testing Accuracy: {test_accuracy:.2f}")
+                print(
+                    f"Epoch {epoch}, Loss: {loss:.4f}, Training Accuracy: {accuracy:.2f}, Testing Accuracy: {test_accuracy:.2f}")
 
         return losses, training_accuracies, testing_accuracies
+
+    def predict(self, x):
+        # Implement the predict method that returns the predictions for the input x
+        _, _, predictions = self.forward(x)
+        return np.argmax(predictions, axis=1)
+
+    def evaluate(self, x_test, y_test):
+        y_pred = self.predict(x_test)
+        y_true = np.argmax(y_test, axis=1)  # Assuming y_test is one-hot encoded
+
+        # Calculate Accuracy
+        accuracy = accuracy_score(y_true, y_pred)
+
+        # Calculate Precision for each class
+        precision = precision_score(y_true, y_pred, average=None)
+
+        # Generate Confusion Matrix
+        conf_matrix = confusion_matrix(y_true, y_pred)
+
+        print("\n")
+        print(f"Accuracy over unseen data: {accuracy}")
+        print(f"Precision for each class: {precision}")
+        print(f"Confusion Matrix:\n{conf_matrix}")

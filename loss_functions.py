@@ -12,7 +12,7 @@ def cross_entropy_loss(predicted_labels, labels):
     predicted_labels = np.clip(predicted_labels, 1e-10, 1. - 1e-10)
 
     # Computation of the cross entropy
-    log_likelihood = -np.log(predicted_labels)  # The logarithm of the predicted probs
+    log_likelihood = -np.log(predicted_labels)
     cross_entropy = labels * log_likelihood
     loss = np.sum(cross_entropy) / sample_number
 

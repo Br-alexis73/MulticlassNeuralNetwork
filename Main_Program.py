@@ -5,8 +5,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, LabelEncoder
 from sklearn.utils import shuffle
 from MLP import MultiClassNeuralNetwork
-from loss_functions import cross_entropy_loss
-from Evaluation_Validation import calculate_accuracy, plot_learning_curves
 
 
 def preprocessing():
@@ -47,7 +45,7 @@ def main():
 
     input_size = train_data.shape[1] - 1
     output_size = len(np.unique(train_data['Species']))
-    hidden_sizes = [5, 3]
+    hidden_sizes = [5, 4, 5, 3]
     nn = MultiClassNeuralNetwork(input_size, hidden_sizes, output_size)
 
     x_train = train_data.drop('Species', axis=1).values
@@ -59,7 +57,7 @@ def main():
     learning_rate = 0.001
 
     # The train function should perform one epoch of training and return the loss and accuracy
-    losses, train_accuracy, test_accuracy = nn.train(x_train, y_train, x_test, y_test, epochs, learning_rate)
+    losses, train_accuracy, test_accuracy = nn.train(x_train, y_train, x_test, y_test, learning_rate, epochs)
 
     # Plotting
     plt.figure(figsize=(12, 6))
@@ -68,8 +66,7 @@ def main():
     plt.subplot(1, 2, 1)
     plt.plot(train_accuracy, label='Training Accuracy')
     plt.plot(test_accuracy, label='Testing Accuracy')
-    plt.title('Accuracy over Epochs')
-    plt.xlabel('Epoch')
+    plt.title(f'Accuracy over Epochs (LR: {learning_rate})')
     plt.ylabel('Accuracy')
     plt.legend()
 
@@ -82,6 +79,7 @@ def main():
     plt.legend()
 
     plt.show()
+    nn.evaluate(x_test, y_test)
 
 
 if __name__ == "__main__":
