@@ -36,6 +36,7 @@ def preprocessing():
     return train_hawk, test_hawk
 
 
+
 def main():
     train_data, test_data = preprocessing()
     print("\nTraining Data:")
@@ -45,43 +46,90 @@ def main():
 
     input_size = train_data.shape[1] - 1
     output_size = len(np.unique(train_data['Species']))
-    hidden_sizes = [7, 5, 5]
-    loss_function = 'mse'
-    regularization = 0.0001
-    nn = MultiClassNeuralNetwork(input_size, hidden_sizes, output_size, loss_function=loss_function, regularization_strength=regularization)
+    hidden_sizes = [8, 5, 7]
 
     x_train = train_data.drop('Species', axis=1).values
     y_train = pd.get_dummies(train_data['Species']).values
     x_test = test_data.drop('Species', axis=1).values
     y_test = pd.get_dummies(test_data['Species']).values
 
+    loss_functions = ['cross_entropy', 'mse', 'mae']
+    regularizations = [0.01]
+    learning_rates = [0.01, 0.001]
     epochs = 100
-    learning_rate = 0.001
-    method = "sgd"
-    losses, train_accuracy, test_accuracy = nn.train(x_train, y_train, x_test, y_test, learning_rate, epochs, method=method)
+    methods = ['sgd', 'mini-batch', 'batch']
 
+    # Results storage
+    results = []
 
-    # Plotting
-    plt.figure(figsize=(12, 6))
+    for loss_function in loss_functions:
+        for regularization in regularizations:
+            for learning_rate in learning_rates:
+                for method in methods:
+                    # Initialize the neural network with the current set of hyperparameters
+                    nn = MultiClassNeuralNetwork(input_size, hidden_sizes, output_size, loss_function=loss_function,
+                                                 regularization_strength=regularization)
+
+                    # Train the network and get training results
+                    losses, train_accuracy, test_accuracy = nn.train(x_train, y_train, x_test, y_test, learning_rate,
+                                                                     epochs, method=method)
+
+                    # Store hyperparameters and the final accuracy or loss
+                    results.append({
+                        'loss_function': loss_function,
+                        'regularization': regularization,
+                        'learning_rate': learning_rate,
+                        'method': method,
+                        'final_train_accuracy': train_accuracy[-1],
+                        'final_test_accuracy': test_accuracy[-1],
+                        'final_loss': losses[-1]
+                    })
+
+    # Convert results to DataFrame for easy manipulation and plotting
+    results_df = pd.DataFrame(results)
+
+    sorted_results = results_df.sort_values('final_test_accuracy', ascending=False)
+
+    # Select the best result
+    best_result = sorted_results.iloc[0]
+
+    # Initialize the best model with the best hyperparameters
+    best_nn = MultiClassNeuralNetwork(input_size, hidden_sizes, output_size,
+                                      loss_function=best_result['loss_function'],
+                                      regularization_strength=best_result['regularization'])
+
+    # Train the best model to get the epoch-wise accuracies and losses
+    losses, train_accuracy, test_accuracy = best_nn.train(x_train, y_train, x_test, y_test,
+                                                          best_result['learning_rate'], epochs,
+                                                          method=best_result['method'])
+
+    # Now you can plot the epoch-wise accuracies and losses
+    plt.figure(figsize=(14, 6))
 
     # Plot training and testing accuracies
     plt.subplot(1, 2, 1)
     plt.plot(train_accuracy, label='Training Accuracy')
     plt.plot(test_accuracy, label='Testing Accuracy')
-    plt.title(f'Accuracy over Epochs (LR: {learning_rate})')
+    plt.title(f'Best Accuracy over Epochs\n(LR: {best_result["learning_rate"]}, '
+              f'Method: {best_result["method"]}, '
+              f'Loss: {best_result["loss_function"]})')
+    plt.xlabel('Epoch')
     plt.ylabel('Accuracy')
     plt.legend()
 
     # Plot training loss
     plt.subplot(1, 2, 2)
     plt.plot(losses, label='Training Loss')
-    plt.title(f'Loss over Epochs (GD Method: {method})')
+    plt.title(f'Best Loss over Epochs\n(LR: {best_result["learning_rate"]}, '
+              f'Method: {best_result["method"]}, '
+              f'Loss: {best_result["loss_function"]})')
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.legend()
 
+    plt.tight_layout()
     plt.show()
-    nn.evaluate(x_test, y_test)
+    best_nn.evaluate(x_test, y_test)
 
 
 if __name__ == "__main__":

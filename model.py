@@ -143,7 +143,9 @@ class MultiClassNeuralNetwork:
             losses.append(loss)
             training_accuracies.append(accuracy)
             testing_accuracies.append(test_accuracy)
-            if epoch % 10 == 0:
+            if epoch % 100 == 0:
+                print('\n')
+                print(f'Optimiser: {method}, Learning rate: {learning_rate}')
                 print(
                     f"Epoch {epoch}, Loss: {loss:.4f}, Training Accuracy: {accuracy:.2f}, Testing Accuracy: {test_accuracy:.2f}")
 
