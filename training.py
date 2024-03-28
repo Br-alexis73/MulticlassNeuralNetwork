@@ -32,6 +32,7 @@ def manual_tuning(x_train, y_train, x_test, y_test):
 
     # Plot results using the provided function
     plot_results(params, losses, train_accuracy, test_accuracy, epochs)
+    return nn, losses, train_accuracy, test_accuracy
 
 
 def automatic_tuning(x_train, y_train, x_test, y_test):
@@ -41,8 +42,8 @@ def automatic_tuning(x_train, y_train, x_test, y_test):
     best_train_accuracy = None
     best_test_accuracy = None
     loss_functions = ['cross_entropy', 'mse', 'mae']
-    regularizations = [0.01]
-    learning_rates = [0.01, 0.001]
+    regularizations = [0.1, 0.01, 0.001]
+    learning_rates = [0.1, 0.01, 0.001]
     epochs = 100
     methods = ['sgd', 'mini-batch']
     hidden_sizes_input = input("Enter hidden layer sizes separated by space (e.g., 8 5 7): ")
